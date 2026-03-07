@@ -1,0 +1,509 @@
+name: distrib
+
+services:
+  event-log-api:
+    hostname: event-log-api
+    image: hub.local.saturnind.ru/rootapp/event-log-api:0.3
+    ports:
+      - "5250:80"
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      VAULT_TOKEN: qwerty123
+      RABBIT_HOST: rabbitmq
+      POSTGRES: "User ID=postgres;Password=postgres;Host=postgres;Port=5432;Database=EventLogDB;Pooling=true;"
+      LogPath: my-logs
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 10s
+      retries: 50
+      timeout: 3s
+      interval: 10s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      users-api:
+        condition: service_healthy
+    networks:
+      - saturn-net
+
+  authorization-api:
+    hostname: authorization
+    image: hub.local.saturnind.ru/rootapp/authorization-api:0.18.9
+    ports:
+      - "5212:80"
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      VAULT_TOKEN: qwerty123
+      RABBIT_HOST: rabbitmq
+      POSTGRES: "User ID=postgres;Password=postgres;Host=postgres;Port=5432;Database=AuthorizationDb;Pooling=true;"
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 10s
+      retries: 50
+      timeout: 3s
+      interval: 10s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      users-api:
+        condition: service_healthy
+    volumes:
+      - ./Data/SeedAuthorization:/app/seed
+    networks:
+      - saturn-net
+
+  users-api:
+    hostname: users-api
+    image: hub.local.saturnind.ru/rootapp/users-api:0.19
+    ports:
+      - "5210:80"
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      VAULT_TOKEN: qwerty123
+      RABBIT_HOST: rabbitmq
+      POSTGRES: "User ID=postgres;Password=postgres;Host=postgres;Port=5432;Database=UsersDb;Pooling=true;"
+      JWT_SECRET: 09F82CFB-123F-4A77-992A-DFD3C859CCDC
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 10s
+      retries: 50
+      timeout: 3s
+      interval: 10s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./Data/SeedUsers:/app/seed
+    networks:
+      - saturn-net
+
+  equipment-api:
+    image: hub.local.saturnind.ru/armkip/equipment-api:${TAG}
+    hostname: equipment
+    build:
+      context: .
+      dockerfile: ./Equipment/Saturn.ArmKip.Equipment.Api/Dockerfile
+    ports:
+      - "5222:80"
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      VAULT_TOKEN: qwerty123
+      POSTGRES: "User ID=postgres;Password=postgres;Host=postgres;Port=5432;Database=EquipmentDb;Pooling=true;"
+      RABBIT_HOST: rabbitmq
+      Report__HttpUrl: report-api
+      PRODUCTION_CALENDAR_URL: production-calendar-api
+      APP_SETTINGS_URL: app-settings-api
+      DEVICE_DISCOVERY_URL: device-discovery-api
+      USERS_URL: users-api
+      DEVICE_MANAGER_URL: http://192.168.10.33:5234
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 3s
+      retries: 10
+      timeout: 3s
+      interval: 15s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./Data/SeedEquipment:/app/seed
+    networks:
+      - saturn-net
+
+  eq-status-monitoring-api:
+    image: hub.local.saturnind.ru/armkip/eq-status-monitoring-api:${TAG}
+    hostname: eq-status-monitoring
+    build:
+      context: .
+      dockerfile: ./EqStatusMonitoring/Saturn.ArmKip.EqStatusMonitoring.Api/Dockerfile
+    ports:
+      - "5223:80"
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      VAULT_TOKEN: qwerty123
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 3s
+      retries: 10
+      timeout: 3s
+      interval: 15s
+    networks:
+      - saturn-net
+
+  fault-management-api:
+    image: hub.local.saturnind.ru/armkip/fault-management-api:${TAG}
+    hostname: fault-management
+    build:
+      context: .
+      dockerfile: ./FaultManagement/Saturn.ArmKip.FaultManagement.Api/Dockerfile
+    ports:
+      - "5227:80"
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      VAULT_URL: http://vault:8200
+      VAULT_TOKEN: qwerty123
+      EQUIPMENT_API: http://equipment-api:5222
+      APP_SETTINGS_URL: http://app-settings-api:5231
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 3s
+      retries: 10
+      timeout: 3s
+      interval: 15s
+    volumes:
+      - ./Data/SeedFaultManagement:/app/seed
+    networks:
+      - saturn-net
+
+  allowances-api:
+    image: hub.local.saturnind.ru/armkip/allowances-api:${TAG}
+    hostname: allowances
+    build:
+      context: .
+      dockerfile: ./Allowances/Saturn.ArmKip.Allowances.Api/Dockerfile
+    ports:
+      - "5232:80"
+    restart: on-failure
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      VAULT_URL: http://vault:8200
+      VAULT_TOKEN: qwerty123
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 3s
+      retries: 10
+      timeout: 3s
+      interval: 15s
+    networks:
+      - saturn-net
+
+
+  checklists-api:
+    image: hub.local.saturnind.ru/armkip/checklists-api:${TAG}
+    hostname: checklists
+    build:
+      context: .
+      dockerfile: ./Checklists/Saturn.ArmKip.Checklists.Api/Dockerfile
+    ports:
+      - "5233:80"
+    restart: on-failure
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      VAULT_URL: http://vault:8200
+      VAULT_TOKEN: qwerty123
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 3s
+      retries: 10
+      timeout: 3s
+      interval: 15s
+    networks:
+      - saturn-net
+
+  device-discovery-api:
+    image: hub.local.saturnind.ru/armkip/device-discovery-api:${TAG}
+    hostname: device-discovery
+    build:
+      context: .
+      dockerfile: ./DeviceDiscovery/Saturn.ArmKip.DeviceDiscovery.Api/Dockerfile
+    ports:
+      - "5224:80"
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      VAULT_TOKEN: qwerty123
+      RABBIT_HOST: rabbitmq
+      APP_SETTINGS_URL: app-settings-api
+      EQUIPMENT_API: http://equipment-api:5222
+      DEVICE_MANAGER_URL: http://192.168.10.33:5234
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 3s
+      retries: 10
+      timeout: 3s
+      interval: 15s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      equipment-api:
+        condition: service_healthy
+      app-settings-api:
+        condition: service_healthy
+    networks:
+      - saturn-net
+
+  device-diagnostics-api:
+    image: hub.local.saturnind.ru/armkip/device-diagnostics-api:${TAG}
+    hostname: device-diagnostics
+    build:
+      context: .
+      dockerfile: ./DeviceDiagnostics/Saturn.ArmKip.DeviceDiagnostics.Api/Dockerfile
+    ports:
+      - "5228:80"
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      VAULT_TOKEN: qwerty123
+      RABBIT_HOST: rabbitmq
+      APP_SETTINGS_URL: app-settings-api
+      EQUIPMENT_API: http://equipment-api:5222
+      DEVICE_MANAGER_URL: http://192.168.10.33:5234
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 3s
+      retries: 10
+      timeout: 3s
+      interval: 15s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      equipment-api:
+        condition: service_healthy
+      app-settings-api:
+        condition: service_healthy
+    networks:
+      - saturn-net
+
+  files-api:
+    hostname: files
+    image: hub.local.saturnind.ru/rootapp/files-api:0.9.1
+    ports:
+      - "5220:80"
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      VAULT_TOKEN: qwerty123
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - files-volume:/app/data/files
+      - ./Data/ReportTemplates:/app/data/files/reports/__$/template
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 10s
+      retries: 50
+      timeout: 3s
+      interval: 10s
+    networks:
+      - saturn-net
+
+  report-api:
+    hostname: report
+    image: hub.local.saturnind.ru/rootapp/report-api:0.2.2
+    ports:
+      - "5225:80"
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      FILES_URL: files-api
+      POSTGRES_CONNECTION_STRING: User ID=postgres;Password=postgres;Host=postgres;Port=5432;Database=ReportDB;Pooling=true;
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 3s
+      retries: 10
+      timeout: 3s
+      interval: 15s
+    depends_on:
+      files-api:
+        condition: service_healthy
+    networks:
+      - saturn-net
+
+  production-calendar-api:
+    hostname: production-calendar
+    image: hub.local.saturnind.ru/rootapp/production-calendar-api:0.0.4
+    ports:
+      - "5226:5226"
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      FILES_URL: files-api
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 3s
+      retries: 10
+      timeout: 3s
+      interval: 15s
+    depends_on:
+      files-api:
+        condition: service_healthy
+    networks:
+      - saturn-net
+
+  gateway:
+    hostname: gateway
+    image: hub.local.saturnind.ru/armkip/gateway:${TAG}
+    build:
+      context: .
+      dockerfile: ./Gateway/Saturn.ArmKip.Gateway.Api/Dockerfile
+    container_name: gateway
+    restart: always
+    #    env_file:
+    #      - .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      VAULT_TOKEN: qwerty123
+      SECURITY_CHECK_EMULATION: true
+      SIGNALR_PREFIX: /signalr
+      RABBIT_HOST: rabbitmq
+      DEVICE_DISCOVERY_URL: http://device-discovery-api:5224
+      EQUIPMENT_URL: http://equipment-api:5222
+      EQ_STATE_MONITORING_API: http://eq-status-monitoring-api:5223
+      JWT_SECRET: 09F82CFB-123F-4A77-992A-DFD3C859CCDC
+      JWT_ACCESS_EXPIRATION: 0.12:00:00
+      USERS_URL: http://users-api:5210
+      FILES_URL: http://files:5220
+      AUTH_URL: http://authorization:5212
+      EQUIPMENT_API: http://equipment-api:5222
+      DISCOVERY_API: http://device-discovery-api:5224
+      EVENT_LOG_URL: http://host.docker.internal:5250
+      Report__HttpUrl: report-api
+      PRODUCTION_CALENDAR_URL: production-calendar-api
+      APP_SETTINGS_URL: app-settings-api
+      FAULT_MANAGEMENT_API: fault-management-api
+      ALLOWANCES_API: allowances-api
+      CHECKLISTS_API: checklists-api
+      DEVICE_DIAGNOSTICS_API: device-diagnostics-api
+      DEVICE_MANAGER_URL: http://192.168.10.33:5234
+    depends_on:
+      files-api:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      users-api:
+        condition: service_started
+      authorization-api:
+        condition: service_started
+      event-log-api:
+        condition: service_healthy
+    ports:
+      - "5000:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - saturn-net
+
+  app-settings-api:
+    image: hub.local.saturnind.ru/rootapp/app-settings-api:0.1.4
+    ports:
+      - "5231:5231"
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      POSTGRES_ROTATION: false # true/false to enable/disable secrets rotation
+      APP_NAME: Астра КИП
+      POSTGRES_CONNECTION_STRING: User ID=postgres;Password=postgres;Host=postgres;Port=5432;Database=AppSettingsDB;Pooling=true;
+    healthcheck:
+      test: curl --fail http://localhost:80/healthCheck || exit 1
+      start_period: 10s
+      retries: 50
+      timeout: 3s
+      interval: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./Data/SeedAppSettings:/app/seed
+    networks:
+      - saturn-net
+
+  frontend:
+    image: hub.local.saturnind.ru/armkip/frontend:${TAG}
+    hostname: frontend
+    container_name: frontend
+    ports:
+      - "443:443"
+      - "80:80"
+    restart: always
+    networks:
+      - saturn-net
+
+  postgres:
+    image: hub.local.saturnind.ru/lib/postgres:17.2-alpine3.21
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: 'trust'
+    healthcheck:
+      test: [ "CMD-SHELL", "su -c 'pg_isready -U postgres -h localhost' postgres" ]
+      start_period: 10s
+      retries: 50
+      timeout: 3s
+      interval: 10s
+    ports:
+      - "5432:5432"
+    restart: always
+    networks:
+      - saturn-net
+
+  rabbitmq:
+    image: hub.local.saturnind.ru/lib/rabbitmq:4.0.5-management-alpine
+    hostname: rabbitmq
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    restart: always
+    healthcheck:
+      test: rabbitmq-diagnostics -q check_port_connectivity
+      start_period: 10s
+      retries: 50
+      timeout: 3s
+      interval: 10s
+    networks:
+      - saturn-net
+
+  vault:
+    image: hub.local.saturnind.ru/rootapp/openbao:0.3-ui
+    hostname: vault
+    container_name: vault
+    environment:
+      SKIP_SETCAP: "true"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DEFAULT_USER: postgres
+      POSTGRES_DEFAULT_PASS: postgres
+      RABBIT_URL: http://rabbitmq:15672
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "8200:8200"
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - saturn-net
+    volumes:
+      - downloads-volume:/downloads
+      #- vault-volume:/bao-data
+    healthcheck:
+      test: [ "CMD", "bao", "status" ]
+      start_period: 10s
+      retries: 50
+      timeout: 3s
+      interval: 10s
+
+networks:
+  saturn-net:
+    name: saturn-net
+    driver: bridge
+
+volumes:
+  files-volume:
+  vault-volume:       # OpenBAO (Vault) kv-storage physical destination
+  downloads-volume:   # simple cache for downloaded binaries

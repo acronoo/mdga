@@ -1,0 +1,902 @@
+{
+  "name": "distrib",
+  "networks": {
+    "saturn-net": {
+      "name": "saturn-net",
+      "driver": "bridge",
+      "ipam": {}
+    }
+  },
+  "services": {
+    "allowances-api": {
+      "build": {
+        "context": "/home/dima/projects/armkip",
+        "dockerfile": "./Allowances/Saturn.ArmKip.Allowances.Api/Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "VAULT_TOKEN": "qwerty123",
+        "VAULT_URL": "http://vault:8200"
+      },
+      "hostname": "allowances",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "15s",
+        "retries": 10,
+        "start_period": "3s"
+      },
+      "image": "hub.local.saturnind.ru/armkip/allowances-api:",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5232",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "on-failure"
+    },
+    "app-settings-api": {
+      "command": null,
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "APP_NAME": "Астра КИП",
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "POSTGRES_CONNECTION_STRING": "User ID=postgres;Password=postgres;Host=postgres;Port=5432;Database=AppSettingsDB;Pooling=true;",
+        "POSTGRES_ROTATION": "false"
+      },
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "10s",
+        "retries": 50,
+        "start_period": "10s"
+      },
+      "image": "hub.local.saturnind.ru/rootapp/app-settings-api:0.1.4",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 5231,
+          "published": "5231",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always",
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "/home/dima/projects/armkip/Data/SeedAppSettings",
+          "target": "/app/seed",
+          "bind": {}
+        }
+      ]
+    },
+    "authorization-api": {
+      "command": null,
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "rabbitmq": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "users-api": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "POSTGRES": "User ID=postgres;Password=postgres;Host=postgres;Port=5432;Database=AuthorizationDb;Pooling=true;",
+        "RABBIT_HOST": "rabbitmq",
+        "VAULT_TOKEN": "qwerty123"
+      },
+      "hostname": "authorization",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "10s",
+        "retries": 50,
+        "start_period": "10s"
+      },
+      "image": "hub.local.saturnind.ru/rootapp/authorization-api:0.18.9",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5212",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always",
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "/home/dima/projects/armkip/Data/SeedAuthorization",
+          "target": "/app/seed",
+          "bind": {}
+        }
+      ]
+    },
+    "checklists-api": {
+      "build": {
+        "context": "/home/dima/projects/armkip",
+        "dockerfile": "./Checklists/Saturn.ArmKip.Checklists.Api/Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "VAULT_TOKEN": "qwerty123",
+        "VAULT_URL": "http://vault:8200"
+      },
+      "hostname": "checklists",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "15s",
+        "retries": 10,
+        "start_period": "3s"
+      },
+      "image": "hub.local.saturnind.ru/armkip/checklists-api:",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5233",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "on-failure"
+    },
+    "device-diagnostics-api": {
+      "build": {
+        "context": "/home/dima/projects/armkip",
+        "dockerfile": "./DeviceDiagnostics/Saturn.ArmKip.DeviceDiagnostics.Api/Dockerfile"
+      },
+      "command": null,
+      "depends_on": {
+        "app-settings-api": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "equipment-api": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "rabbitmq": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "APP_SETTINGS_URL": "app-settings-api",
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "DEVICE_MANAGER_URL": "http://192.168.10.33:5234",
+        "EQUIPMENT_API": "http://equipment-api:5222",
+        "RABBIT_HOST": "rabbitmq",
+        "VAULT_TOKEN": "qwerty123"
+      },
+      "hostname": "device-diagnostics",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "15s",
+        "retries": 10,
+        "start_period": "3s"
+      },
+      "image": "hub.local.saturnind.ru/armkip/device-diagnostics-api:",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5228",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always"
+    },
+    "device-discovery-api": {
+      "build": {
+        "context": "/home/dima/projects/armkip",
+        "dockerfile": "./DeviceDiscovery/Saturn.ArmKip.DeviceDiscovery.Api/Dockerfile"
+      },
+      "command": null,
+      "depends_on": {
+        "app-settings-api": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "equipment-api": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "rabbitmq": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "APP_SETTINGS_URL": "app-settings-api",
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "DEVICE_MANAGER_URL": "http://192.168.10.33:5234",
+        "EQUIPMENT_API": "http://equipment-api:5222",
+        "RABBIT_HOST": "rabbitmq",
+        "VAULT_TOKEN": "qwerty123"
+      },
+      "hostname": "device-discovery",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "15s",
+        "retries": 10,
+        "start_period": "3s"
+      },
+      "image": "hub.local.saturnind.ru/armkip/device-discovery-api:",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5224",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always"
+    },
+    "eq-status-monitoring-api": {
+      "build": {
+        "context": "/home/dima/projects/armkip",
+        "dockerfile": "./EqStatusMonitoring/Saturn.ArmKip.EqStatusMonitoring.Api/Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "VAULT_TOKEN": "qwerty123"
+      },
+      "hostname": "eq-status-monitoring",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "15s",
+        "retries": 10,
+        "start_period": "3s"
+      },
+      "image": "hub.local.saturnind.ru/armkip/eq-status-monitoring-api:",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5223",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always"
+    },
+    "equipment-api": {
+      "build": {
+        "context": "/home/dima/projects/armkip",
+        "dockerfile": "./Equipment/Saturn.ArmKip.Equipment.Api/Dockerfile"
+      },
+      "command": null,
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "rabbitmq": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "APP_SETTINGS_URL": "app-settings-api",
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "DEVICE_DISCOVERY_URL": "device-discovery-api",
+        "DEVICE_MANAGER_URL": "http://192.168.10.33:5234",
+        "POSTGRES": "User ID=postgres;Password=postgres;Host=postgres;Port=5432;Database=EquipmentDb;Pooling=true;",
+        "PRODUCTION_CALENDAR_URL": "production-calendar-api",
+        "RABBIT_HOST": "rabbitmq",
+        "Report__HttpUrl": "report-api",
+        "USERS_URL": "users-api",
+        "VAULT_TOKEN": "qwerty123"
+      },
+      "hostname": "equipment",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "15s",
+        "retries": 10,
+        "start_period": "3s"
+      },
+      "image": "hub.local.saturnind.ru/armkip/equipment-api:",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5222",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always",
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "/home/dima/projects/armkip/Data/SeedEquipment",
+          "target": "/app/seed",
+          "bind": {}
+        }
+      ]
+    },
+    "event-log-api": {
+      "command": null,
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "rabbitmq": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "users-api": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "LogPath": "my-logs",
+        "POSTGRES": "User ID=postgres;Password=postgres;Host=postgres;Port=5432;Database=EventLogDB;Pooling=true;",
+        "RABBIT_HOST": "rabbitmq",
+        "VAULT_TOKEN": "qwerty123"
+      },
+      "hostname": "event-log-api",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "10s",
+        "retries": 50,
+        "start_period": "10s"
+      },
+      "image": "hub.local.saturnind.ru/rootapp/event-log-api:0.3",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5250",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always"
+    },
+    "fault-management-api": {
+      "build": {
+        "context": "/home/dima/projects/armkip",
+        "dockerfile": "./FaultManagement/Saturn.ArmKip.FaultManagement.Api/Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "APP_SETTINGS_URL": "http://app-settings-api:5231",
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "EQUIPMENT_API": "http://equipment-api:5222",
+        "VAULT_TOKEN": "qwerty123",
+        "VAULT_URL": "http://vault:8200"
+      },
+      "hostname": "fault-management",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "15s",
+        "retries": 10,
+        "start_period": "3s"
+      },
+      "image": "hub.local.saturnind.ru/armkip/fault-management-api:",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5227",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always",
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "/home/dima/projects/armkip/Data/SeedFaultManagement",
+          "target": "/app/seed",
+          "bind": {}
+        }
+      ]
+    },
+    "files-api": {
+      "command": null,
+      "depends_on": {
+        "rabbitmq": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "VAULT_TOKEN": "qwerty123"
+      },
+      "hostname": "files",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "10s",
+        "retries": 50,
+        "start_period": "10s"
+      },
+      "image": "hub.local.saturnind.ru/rootapp/files-api:0.9.1",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5220",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always",
+      "volumes": [
+        {
+          "type": "volume",
+          "source": "files-volume",
+          "target": "/app/data/files",
+          "volume": {}
+        },
+        {
+          "type": "bind",
+          "source": "/home/dima/projects/armkip/Data/ReportTemplates",
+          "target": "/app/data/files/reports/__$$/template",
+          "bind": {}
+        }
+      ]
+    },
+    "frontend": {
+      "command": null,
+      "container_name": "frontend",
+      "entrypoint": null,
+      "hostname": "frontend",
+      "image": "hub.local.saturnind.ru/armkip/frontend:",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 443,
+          "published": "443",
+          "protocol": "tcp"
+        },
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "80",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always"
+    },
+    "gateway": {
+      "build": {
+        "context": "/home/dima/projects/armkip",
+        "dockerfile": "./Gateway/Saturn.ArmKip.Gateway.Api/Dockerfile"
+      },
+      "command": null,
+      "container_name": "gateway",
+      "depends_on": {
+        "authorization-api": {
+          "condition": "service_started",
+          "required": true
+        },
+        "event-log-api": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "files-api": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "rabbitmq": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "users-api": {
+          "condition": "service_started",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "ALLOWANCES_API": "allowances-api",
+        "APP_SETTINGS_URL": "app-settings-api",
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "AUTH_URL": "http://authorization:5212",
+        "CHECKLISTS_API": "checklists-api",
+        "DEVICE_DIAGNOSTICS_API": "device-diagnostics-api",
+        "DEVICE_DISCOVERY_URL": "http://device-discovery-api:5224",
+        "DEVICE_MANAGER_URL": "http://192.168.10.33:5234",
+        "DISCOVERY_API": "http://device-discovery-api:5224",
+        "EQUIPMENT_API": "http://equipment-api:5222",
+        "EQUIPMENT_URL": "http://equipment-api:5222",
+        "EQ_STATE_MONITORING_API": "http://eq-status-monitoring-api:5223",
+        "EVENT_LOG_URL": "http://host.docker.internal:5250",
+        "FAULT_MANAGEMENT_API": "fault-management-api",
+        "FILES_URL": "http://files:5220",
+        "JWT_ACCESS_EXPIRATION": "0.12:00:00",
+        "JWT_SECRET": "09F82CFB-123F-4A77-992A-DFD3C859CCDC",
+        "PRODUCTION_CALENDAR_URL": "production-calendar-api",
+        "RABBIT_HOST": "rabbitmq",
+        "Report__HttpUrl": "report-api",
+        "SECURITY_CHECK_EMULATION": "true",
+        "SIGNALR_PREFIX": "/signalr",
+        "USERS_URL": "http://users-api:5210",
+        "VAULT_TOKEN": "qwerty123"
+      },
+      "extra_hosts": [
+        "host.docker.internal=host-gateway"
+      ],
+      "hostname": "gateway",
+      "image": "hub.local.saturnind.ru/armkip/gateway:",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5000",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always"
+    },
+    "postgres": {
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "POSTGRES_HOST_AUTH_METHOD": "trust"
+      },
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "su -c 'pg_isready -U postgres -h localhost' postgres"
+        ],
+        "timeout": "3s",
+        "interval": "10s",
+        "retries": 50,
+        "start_period": "10s"
+      },
+      "image": "hub.local.saturnind.ru/lib/postgres:17.2-alpine3.21",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 5432,
+          "published": "5432",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always"
+    },
+    "production-calendar-api": {
+      "command": null,
+      "depends_on": {
+        "files-api": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "FILES_URL": "files-api"
+      },
+      "hostname": "production-calendar",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "15s",
+        "retries": 10,
+        "start_period": "3s"
+      },
+      "image": "hub.local.saturnind.ru/rootapp/production-calendar-api:0.0.4",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 5226,
+          "published": "5226",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always"
+    },
+    "rabbitmq": {
+      "command": null,
+      "entrypoint": null,
+      "hostname": "rabbitmq",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "rabbitmq-diagnostics -q check_port_connectivity"
+        ],
+        "timeout": "3s",
+        "interval": "10s",
+        "retries": 50,
+        "start_period": "10s"
+      },
+      "image": "hub.local.saturnind.ru/lib/rabbitmq:4.0.5-management-alpine",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 15672,
+          "published": "15672",
+          "protocol": "tcp"
+        },
+        {
+          "mode": "ingress",
+          "target": 5672,
+          "published": "5672",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always"
+    },
+    "report-api": {
+      "command": null,
+      "depends_on": {
+        "files-api": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "FILES_URL": "files-api",
+        "POSTGRES_CONNECTION_STRING": "User ID=postgres;Password=postgres;Host=postgres;Port=5432;Database=ReportDB;Pooling=true;"
+      },
+      "hostname": "report",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "15s",
+        "retries": 10,
+        "start_period": "3s"
+      },
+      "image": "hub.local.saturnind.ru/rootapp/report-api:0.2.2",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5225",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always"
+    },
+    "users-api": {
+      "command": null,
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "rabbitmq": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "JWT_SECRET": "09F82CFB-123F-4A77-992A-DFD3C859CCDC",
+        "POSTGRES": "User ID=postgres;Password=postgres;Host=postgres;Port=5432;Database=UsersDb;Pooling=true;",
+        "RABBIT_HOST": "rabbitmq",
+        "VAULT_TOKEN": "qwerty123"
+      },
+      "hostname": "users-api",
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "curl --fail http://localhost:80/healthCheck || exit 1"
+        ],
+        "timeout": "3s",
+        "interval": "10s",
+        "retries": 50,
+        "start_period": "10s"
+      },
+      "image": "hub.local.saturnind.ru/rootapp/users-api:0.19",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 80,
+          "published": "5210",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always",
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "/home/dima/projects/armkip/Data/SeedUsers",
+          "target": "/app/seed",
+          "bind": {}
+        }
+      ]
+    },
+    "vault": {
+      "command": null,
+      "container_name": "vault",
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy",
+          "required": true
+        },
+        "rabbitmq": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "POSTGRES_DEFAULT_PASS": "postgres",
+        "POSTGRES_DEFAULT_USER": "postgres",
+        "POSTGRES_HOST": "postgres",
+        "POSTGRES_PORT": "5432",
+        "RABBITMQ_DEFAULT_PASS": "guest",
+        "RABBITMQ_DEFAULT_USER": "guest",
+        "RABBIT_URL": "http://rabbitmq:15672",
+        "SKIP_SETCAP": "true"
+      },
+      "hostname": "vault",
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "bao",
+          "status"
+        ],
+        "timeout": "3s",
+        "interval": "10s",
+        "retries": 50,
+        "start_period": "10s"
+      },
+      "image": "hub.local.saturnind.ru/rootapp/openbao:0.3-ui",
+      "networks": {
+        "saturn-net": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 8200,
+          "published": "8200",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "always",
+      "volumes": [
+        {
+          "type": "volume",
+          "source": "downloads-volume",
+          "target": "/downloads",
+          "volume": {}
+        }
+      ]
+    }
+  },
+  "volumes": {
+    "downloads-volume": {
+      "name": "distrib_downloads-volume"
+    },
+    "files-volume": {
+      "name": "distrib_files-volume"
+    }
+  }
+}

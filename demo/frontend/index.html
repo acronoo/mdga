@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Service</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #response {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            min-height: 50px;
+        }
+        .loading {
+            color: #666;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .success {
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <h1>Frontend Service</h1>
+    <p>Click buttons to send requests to backend-api</p>
+    
+    <div>
+        <button onclick="callHello()">Call /hello</button>
+        <button onclick="callWho()">Call /who</button>
+    </div>
+    
+    <div id="response"></div>
+
+    <script>
+        async function callHello() {
+            const responseDiv = document.getElementById('response');
+            responseDiv.innerHTML = '<span class="loading">Loading...</span>';
+
+            try {
+                const response = await fetch('/api/hello');
+                const data = await response.json();
+                responseDiv.innerHTML = `<span class="success">Response from /hello:</span><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                responseDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        async function callWho() {
+            const responseDiv = document.getElementById('response');
+            responseDiv.innerHTML = '<span class="loading">Loading...</span>';
+
+            try {
+                const response = await fetch('/api/who');
+                const data = await response.json();
+                responseDiv.innerHTML = `<span class="success">Response from /who:</span><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                responseDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>

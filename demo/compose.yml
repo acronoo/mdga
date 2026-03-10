@@ -1,0 +1,34 @@
+name: demo
+services:
+  backend-api:
+    image: backend-api:latest
+    build: 
+      context: .
+      dockerfile: ./backend-api/Dockerfile
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - demo
+
+  frontend:
+    image: frontend:latest
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      backend-api:
+        condition: service_healthy
+    networks:
+      - demo
+networks:
+  demo:
+    name: demo
+    driver: bridge
+

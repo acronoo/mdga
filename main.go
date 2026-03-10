@@ -58,8 +58,8 @@ var (
 			MarginBottom(1)
 
 	checkboxStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#3B82F6"))
-	selectedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#10B981"))
-	buttonStyle    = lipgloss.NewStyle().
+	selectedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#10B981"))
+	buttonStyle   = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FFFFFF")).
 			Background(lipgloss.Color("#3B82F6")).
 			Padding(0, 3).
@@ -512,6 +512,17 @@ func (m model) View() string {
 		b.WriteString("\n")
 		b.WriteString(infoStyle.Render(fmt.Sprintf("TAG: %s", m.tag)))
 		b.WriteString("\n\n")
+
+		b.WriteString(infoStyle.Render("Сервисы:"))
+		b.WriteString("\n")
+		for _, svc := range m.servicesAll {
+			if m.servicesLocal[svc] {
+				b.WriteString(fmt.Sprintf("  %s %s (локально)\n", infoStyle.Render("○"), svc))
+			} else {
+				b.WriteString(fmt.Sprintf("  %s %s (в Docker)\n", successStyle.Render("●"), svc))
+			}
+		}
+		b.WriteString("\n")
 
 		if m.hostsLine != "" {
 			b.WriteString(infoStyle.Render("Добавьте следующую строку в /etc/hosts:"))
